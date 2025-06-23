@@ -4,26 +4,22 @@ from utils.analytics_utils import load_metrics
 
 st.set_page_config(page_title="Analytics Dashboard", layout="wide")
 st.title("📈 Model Evaluation Summary")
-st.markdown("This dashboard provides a high-level overview of the AI model's test performance using the Camelyon17-clean dataset.")
+st.markdown("This dashboard provides a high-level overview of the AI model's test performance on the Camelyon17-clean dataset.")
 
-# Load metrics
-try:
-    df = load_metrics()
-except Exception as e:
-    st.error(f"❌ Failed to load metrics: {e}")
-    st.stop()
+df = load_metrics()
 
-# =======================
-# Summary Section
-# =======================
+# === Summary Section ===
 st.subheader("🧪 Test Performance Metrics")
 
 try:
-    # Extract '515 / 517' from last row and split
-    total_info = df.iloc[3, 3]
-    correct, total = map(int, total_info.strip().split("/"))
+    # Assume final row has format like: "99 / 100", "0.0046"
+    last_row = df.iloc[-1]
+    total_correct = last_row[1]  # Assuming format "Correct / Total"
+    loss_val = float(last_row[2]) if len(last_row) > 2 else 0.0
+
+    correct, total = [int(x.strip()) for x in str(total_correct).split("/")]
+
     accuracy = correct / total * 100
-    loss = 0.0021  # 🔧 Optional: Insert or estimate loss manually or from another file if known
 
     summary_data = {
         "🧬 Model": ["ResNet18"],
@@ -31,7 +27,7 @@ try:
         "🧪 Total Test Samples": [total],
         "✅ Correct Predictions": [correct],
         "🎯 Overall Accuracy (%)": [f"{accuracy:.2f}%"],
-        "📉 Loss Value": [f"{loss:.4f}"]  # Replace with actual value if available
+        "📉 Loss Value": [f"{loss_val:.4f}"]
     }
     summary_df = pd.DataFrame(summary_data).T.rename(columns={0: "Value"})
     st.table(summary_df)
@@ -39,30 +35,26 @@ try:
 except Exception as e:
     st.error(f"⚠️ Failed to parse summary metrics: {e}")
 
-# =======================
-# Per-Class Accuracy
-# =======================
+# === Per-Class Breakdown ===
 st.subheader("📊 Per-Class Accuracy Breakdown")
 
 try:
-    class0_acc = float(df.iloc[1, 1]) * 100
-    class1_acc = float(df.iloc[2, 2]) * 100
+    # Class names assumed in row 0
+    normal_class = df.iloc[0, 1]
+    abnormal_class = df.iloc[0, 2]
 
-    acc_df = pd.DataFrame({
-        "Class": ["Normal Tissue (Class 0)", "Abnormal / Cancerous (Class 1)"],
-        "Accuracy (%)": [f"{class0_acc:.2f}", f"{class1_acc:.2f}"]
-    })
-    st.dataframe(acc_df.set_index("Class"))
-    st.bar_chart({
-        "Normal Tissue": class0_acc,
-        "Abnormal Tissue": class1_acc
-    })
+    normal_acc = float(df.iloc[1, 2]) * 100
+    abnormal_acc = float(df.iloc[2, 2]) * 100
+
+    class_acc = {
+        f"{normal_class}": normal_acc,
+        f"{abnormal_class}": abnormal_acc
+    }
+    st.bar_chart(pd.DataFrame.from_dict(class_acc, orient='index', columns=["Accuracy (%)"]))
 
 except Exception as e:
     st.warning(f"⚠️ Could not extract per-class accuracy. {e}")
 
-# =======================
-# Clinical Note
-# =======================
+# === Interpretation ===
 st.subheader("🧠 Interpretation")
-st.success("The AI model achieved high classification performance across both tissue types. Accuracy above 99% suggests strong reliability. For clinical deployment, further validation under supervision is recommended.")
+st.success("The AI model demonstrated high test accuracy and is reliable for assisting in pathology-based cancer detection. However, further clinical validation is encouraged.")
