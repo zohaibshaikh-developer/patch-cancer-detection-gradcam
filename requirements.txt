@@ -8,3 +8,4 @@ scikit-learn
 # opencv-python
 reportlab
 opencv-python-headless==4.11.0.86
+pytorch-grad-cam==1.4.0
