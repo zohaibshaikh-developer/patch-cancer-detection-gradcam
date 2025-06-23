@@ -8,4 +8,10 @@ def load_metrics(path=None):
     
     latest = metrics_files[-1]
     df = pd.read_csv(latest)
+
+    # 🔧 Ensure Arrow compatibility
+    for col in df.columns:
+        if df[col].dtype == 'object':
+            df[col] = df[col].astype(str)
+    
     return df
