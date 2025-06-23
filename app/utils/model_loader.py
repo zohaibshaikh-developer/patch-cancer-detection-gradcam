@@ -2,7 +2,7 @@ import torch
 from torchvision.models import resnet18
 from torchvision import transforms
 from PIL import Image
-from .gradcam_utils import apply_gradcam_and_interpret
+from gradcam_utils import apply_gradcam_and_interpret
 from utils.report_generator_live import build_patch_pdf_report
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
