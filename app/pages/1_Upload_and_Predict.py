@@ -1,7 +1,5 @@
 import streamlit as st
-# from app.utils.model_loader import predict_and_visualize
 from utils.model_loader import predict_and_visualize
-
 from PIL import Image
 
 st.set_page_config(page_title="Upload and Predict", layout="wide")
@@ -15,7 +13,9 @@ if uploaded:
     st.image(uploaded, caption="🧩 Uploaded Patch", width=250)
 
     with st.spinner("🔍 Running model inference and Grad-CAM..."):
-        result = predict_and_visualize(uploaded)
+        # 🔁 Convert to PIL Image (required by transforms)
+        image_pil = Image.open(uploaded).convert("RGB")
+        result = predict_and_visualize(image_pil)
 
     # === Prediction and Confidence ===
     label = "✅ Normal Tissue" if result["pred"] == 0 else "❗ Abnormal / Cancerous"
@@ -55,4 +55,3 @@ Generated    : Live Inference
         file_name="Patch_GradCAM_Report.pdf",
         mime="application/pdf"
     )
-
