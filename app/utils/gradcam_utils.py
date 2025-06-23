@@ -17,7 +17,7 @@ def find_target_layer(model):
     # For ResNet18, last convolutional layer is typically layer4[-1]
     return model.layer4[-1]
 
-def apply_gradcam_and_interpret(model, input_tensor, target_class, original_pil):
+def apply_gradcam_and_interpret(model, image, target_layer, class_idx):
     original_np = np.array(original_pil.resize((224, 224))).astype(np.float32) / 255.0
     original_np = original_np[..., :3]  # remove alpha if any
 
