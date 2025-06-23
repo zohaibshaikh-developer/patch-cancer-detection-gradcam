@@ -12,13 +12,18 @@ df = load_metrics()
 st.subheader("🧪 Test Performance Metrics")
 
 try:
-    # Assume final row has format like: "99 / 100", "0.0046"
-    last_row = df.iloc[-1]
-    total_correct = last_row[1]  # Assuming format "Correct / Total"
-    loss_val = float(last_row[2]) if len(last_row) > 2 else 0.0
+    # Find the row that contains the 'Correct / Total' pattern
+    summary_row = None
+    for i, row in df.iterrows():
+        if isinstance(row[1], str) and "/" in row[1]:
+            summary_row = row
+            break
 
-    correct, total = [int(x.strip()) for x in str(total_correct).split("/")]
+    if summary_row is None:
+        raise ValueError("No row with 'Correct / Total' pattern found.")
 
+    correct, total = [int(x.strip()) for x in summary_row[1].split("/")]
+    loss_val = float(summary_row[2]) if len(summary_row) > 2 else 0.0
     accuracy = correct / total * 100
 
     summary_data = {
@@ -39,16 +44,12 @@ except Exception as e:
 st.subheader("📊 Per-Class Accuracy Breakdown")
 
 try:
-    # Class names assumed in row 0
-    normal_class = df.iloc[0, 1]
-    abnormal_class = df.iloc[0, 2]
-
     normal_acc = float(df.iloc[1, 2]) * 100
     abnormal_acc = float(df.iloc[2, 2]) * 100
 
     class_acc = {
-        f"{normal_class}": normal_acc,
-        f"{abnormal_class}": abnormal_acc
+        "Normal Tissue": normal_acc,
+        "Abnormal / Cancerous": abnormal_acc
     }
     st.bar_chart(pd.DataFrame.from_dict(class_acc, orient='index', columns=["Accuracy (%)"]))
 
