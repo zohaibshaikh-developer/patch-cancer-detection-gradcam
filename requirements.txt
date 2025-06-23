@@ -1,11 +1,7 @@
-streamlit
+pytorch-grad-cam==1.4.0
+opencv-python-headless==4.11.0.86
 torch
 torchvision
-Pillow
-numpy
-matplotlib
-scikit-learn
-# opencv-python
+streamlit
+pillow
 reportlab
-opencv-python-headless==4.11.0.86
-pytorch-grad-cam==1.4.0
