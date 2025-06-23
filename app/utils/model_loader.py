@@ -28,7 +28,7 @@ def predict_and_visualize(image: Image.Image):
     pred = outputs.argmax(dim=1).item()
 
     # Grad-CAM and interpretation
-    overlay_img, heatmap_img, note, focus_score, center_coords, observation =  = apply_gradcam_and_interpret(
+    overlay_img, heatmap_img, note, focus_score, center_coords, observation = apply_gradcam_and_interpret(
         model=model,
         image=image,
         target_layer=model.layer4[-1],
