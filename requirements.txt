@@ -1,4 +1,4 @@
-pytorch-grad-cam
+git+https://github.com/jacobgil/pytorch-grad-cam.git
 opencv-python-headless==4.11.0.86
 torch
 torchvision
