@@ -1,0 +1,29 @@
+# Python & Env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.env
+*.venv
+.env/
+.venv/
+cancer-env/
+
+# Logs, Checkpoints, Models
+logs/
+models/
+*.pth
+*.pt
+*.ckpt
+
+# Data
+*.npy
+*.npz
+*.csv
+*.pdf
+datasets/
+# Patch_GradCAM_Report.pdf
+
+# Streamlit & Cache
+.streamlit/
+.ipynb_checkpoints/
