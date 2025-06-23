@@ -38,13 +38,13 @@ def predict_and_visualize(image: Image.Image):
 
     center_coords = (0.50, 0.50)  # Replace with real logic if available
 
-        return {
+    return {
         "pred": pred,
         "conf": confidence[pred],
         "overlay": overlay_img,
         "heatmap": heatmap_img,
         "original": image,
-        "note": note,
+        "note": clinical_note,
         "observation": observation,
         "focus_percent": f"{focus_score * 100:.2f}%",
         "center": f"({center_coords[0]:.2f}, {center_coords[1]:.2f})",
@@ -57,6 +57,7 @@ def predict_and_visualize(image: Image.Image):
             focus_ratio=focus_score,
             center_distance=center_coords,
             observation=observation,
-            clinical_note=note
+            clinical_note=clinical_note
         )
     }
+
