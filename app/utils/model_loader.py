@@ -30,9 +30,11 @@ def predict_and_visualize(image: Image.Image):
     overlay_img, heatmap_img, clinical_note, focus_score = apply_gradcam_and_interpret(
         model=model,
         image=image,
-        target_layer=model.layer4[-1],  # last conv layer
-        device=device,
+        target_layer=model.layer4[-1],
+        class_idx=pred,
+        device=device
     )
+
 
     return {
         "overlay_image": overlay_img,

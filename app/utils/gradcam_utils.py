@@ -17,53 +17,31 @@ def find_target_layer(model):
     # For ResNet18, last convolutional layer is typically layer4[-1]
     return model.layer4[-1]
 
-def apply_gradcam_and_interpret(model, image, target_layer, class_idx):
-    original_np = np.array(original_pil.resize((224, 224))).astype(np.float32) / 255.0
-    original_np = original_np[..., :3]  # remove alpha if any
+def apply_gradcam_and_interpret(model, image, target_layer, class_idx, device):
+    from pytorch_grad_cam import GradCAM
+    from pytorch_grad_cam.utils.image import show_cam_on_image
+    import numpy as np
 
-    # Initialize GradCAM
-    target_layer = find_target_layer(model)
-    cam = GradCAM(model=model, target_layers=[target_layer], reshape_transform=None)
-    grayscale_cam = cam(input_tensor=input_tensor.unsqueeze(0), targets=None)[0]  # HWC, float32
+    # Prepare image for Grad-CAM
+    image_np = np.array(image.resize((224, 224))).astype(np.float32) / 255.0
+    input_tensor = torch.tensor(image_np).permute(2, 0, 1).unsqueeze(0).to(device)
 
-    # === Colored heatmap ===
-    heatmap_uint8 = np.uint8(255 * grayscale_cam)
-    heatmap_color = cv2.applyColorMap(heatmap_uint8, cv2.COLORMAP_JET)
-    heatmap_rgb = cv2.cvtColor(heatmap_color, cv2.COLOR_BGR2RGB)
+    cam = GradCAM(model=model, target_layers=[target_layer])
+    grayscale_cam = cam(input_tensor=input_tensor, targets=None)[0]
 
-    # === Overlay ===
-    overlay_np = show_cam_on_image(original_np, grayscale_cam, use_rgb=True)
+    heatmap = (grayscale_cam * 255).astype(np.uint8)
+    overlay = show_cam_on_image(image_np, grayscale_cam, use_rgb=True)
 
-    # Convert all to PIL
-    heatmap_img = Image.fromarray(heatmap_rgb)
-    overlay_img = Image.fromarray(overlay_np)
-    original_img = original_pil.resize((224, 224))
+    # Interpret results
+    focus_score = (grayscale_cam > 0.5).mean()
+    clinical_note = (
+        "⚠️ High attention on abnormal regions. Immediate review advised."
+        if focus_score > 0.3 else
+        "✅ Attention is low. Likely benign, but clinical context is still required."
+    )
 
-    # === Interpretation Logic ===
-    focus_ratio = (grayscale_cam > 0.5).mean()
-    coords = np.column_stack(np.where(grayscale_cam > 0.5))
-    center_distance = 1.0
-    if coords.any():
-        y, x = coords.mean(axis=0)
-        h, w = grayscale_cam.shape
-        norm_x, norm_y = x / w, y / h
-        center_distance = np.sqrt((norm_x - 0.5)**2 + (norm_y - 0.5)**2)
+    return Image.fromarray(overlay), Image.fromarray(heatmap), clinical_note, focus_score
 
-    # === Clinical Observation Rules ===
-    if focus_ratio > 0.3 and center_distance < 0.3:
-        observation = "High central attention on dense region—suggestive of carcinoma focus."
-        clinical_note = "Considered likely malignant. Follow-up histopathological confirmation advised."
-    elif focus_ratio < 0.1:
-        observation = "Diffuse attention with low model certainty."
-        clinical_note = "Inconclusive focus; could represent ambiguous tissue. Recommend retesting."
-    elif focus_ratio >= 0.1 and center_distance >= 0.6:
-        observation = "Peripheral activation—possibly boundary tissue or well-differentiated zone."
-        clinical_note = "No critical concern. Likely benign."
-    else:
-        observation = "Moderate attention around tissue clusters."
-        clinical_note = "Likely benign, but attention map suggests areas worth inspection."
-
-    return original_img, heatmap_img, overlay_img, observation, clinical_note, (norm_x, norm_y), focus_ratio
 
 def generate_pdf_report(original_pil, heat_pil, overlay_pil, class_idx, obs, note):
     buffer = BytesIO()
