@@ -18,30 +18,29 @@ def find_target_layer(model):
     return model.layer4[-1]
 
 def apply_gradcam_and_interpret(model, image, target_layer, class_idx, device):
-    from pytorch_grad_cam import GradCAM
-    from pytorch_grad_cam.utils.image import show_cam_on_image
-    import numpy as np
+    transform = transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor()
+    ])
+    input_tensor = transform(image).unsqueeze(0).to(device)
 
-    # Prepare image for Grad-CAM
-    image_np = np.array(image.resize((224, 224))).astype(np.float32) / 255.0
-    input_tensor = torch.tensor(image_np).permute(2, 0, 1).unsqueeze(0).to(device)
+    cam = GradCAM(model=model, target_layers=[target_layer], use_cuda=torch.cuda.is_available())
+    grayscale_cam = cam(input_tensor=input_tensor, targets=[ClassifierOutputTarget(class_idx)])[0]  # [0] for single image
 
-    cam = GradCAM(model=model, target_layers=[target_layer])
-    grayscale_cam = cam(input_tensor=input_tensor, targets=None)[0]
+    # 🔁 Normalize original image to [0,1] as numpy array
+    rgb_np = np.array(image.resize((224, 224))).astype(np.float32) / 255.0
 
-    heatmap = (grayscale_cam * 255).astype(np.uint8)
-    overlay = show_cam_on_image(image_np, grayscale_cam, use_rgb=True)
+    # ✅ Generate overlay with Jet colormap
+    cam_image = show_cam_on_image(rgb_np, grayscale_cam, use_rgb=True)
 
-    # Interpret results
-    focus_score = (grayscale_cam > 0.5).mean()
-    clinical_note = (
-        "⚠️ High attention on abnormal regions. Immediate review advised."
-        if focus_score > 0.3 else
-        "✅ Attention is low. Likely benign, but clinical context is still required."
-    )
+    # Optional: convert to PIL
+    overlay_pil = Image.fromarray(cam_image)
 
-    return Image.fromarray(overlay), Image.fromarray(heatmap), clinical_note, focus_score
+    # Placeholder interpretation logic (replace with your own if needed)
+    note = "⚠️ High attention on abnormal regions. Immediate review advised." if class_idx == 1 else "✅ Low attention on suspicious regions."
+    focus_score = float(grayscale_cam.mean())
 
+    return overlay_pil, Image.fromarray((grayscale_cam * 255).astype(np.uint8)), note, focus_score
 
 def generate_pdf_report(original_pil, heat_pil, overlay_pil, class_idx, obs, note):
     buffer = BytesIO()
