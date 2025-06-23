@@ -28,7 +28,7 @@ def predict_and_visualize(image: Image.Image):
     pred = outputs.argmax(dim=1).item()
 
     # Grad-CAM and interpretation
-    overlay_img, heatmap_img, clinical_note, focus_score = apply_gradcam_and_interpret(
+    overlay_img, heatmap_img, note, focus_score, center_coords, observation =  = apply_gradcam_and_interpret(
         model=model,
         image=image,
         target_layer=model.layer4[-1],
@@ -38,14 +38,14 @@ def predict_and_visualize(image: Image.Image):
 
     center_coords = (0.50, 0.50)  # Replace with real logic if available
 
-    return {
+        return {
         "pred": pred,
         "conf": confidence[pred],
         "overlay": overlay_img,
         "heatmap": heatmap_img,
         "original": image,
-        "note": clinical_note,
-        "observation": f"Model focused {focus_score * 100:.2f}% on suspicious regions.",
+        "note": note,
+        "observation": observation,
         "focus_percent": f"{focus_score * 100:.2f}%",
         "center": f"({center_coords[0]:.2f}, {center_coords[1]:.2f})",
         "pdf_buffer": build_patch_pdf_report(
@@ -56,7 +56,7 @@ def predict_and_visualize(image: Image.Image):
             confidence=confidence[pred],
             focus_ratio=focus_score,
             center_distance=center_coords,
-            observation=f"Model focused {focus_score * 100:.2f}% on suspicious regions.",
-            clinical_note=clinical_note
+            observation=observation,
+            clinical_note=note
         )
     }

@@ -15,59 +15,62 @@ from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 
 def find_target_layer(model):
     return model.layer4[-1]  # ResNet18's last conv layer
-
 def apply_gradcam_and_interpret(model, image, target_layer, class_idx, device):
+    # Transform the image
     transform = transforms.Compose([
         transforms.Resize((224, 224)),
         transforms.ToTensor()
     ])
     input_tensor = transform(image).unsqueeze(0).to(device)
 
-    cam = GradCAM(model=model, target_layers=[target_layer], use_cuda=torch.cuda.is_available())
-    grayscale_cam = cam(input_tensor=input_tensor, targets=[ClassifierOutputTarget(class_idx)])[0]
+    # Initialize GradCAM without deprecated use_cuda
+    cam = GradCAM(model=model, target_layers=[target_layer])
+    grayscale_cam = cam(input_tensor=input_tensor, targets=[ClassifierOutputTarget(class_idx)])[0]  # shape: (H, W)
 
-    # Prepare normalized RGB input
+    # Normalize original image to [0,1]
     rgb_np = np.array(image.resize((224, 224))).astype(np.float32) / 255.0
-    rgb_np = rgb_np[..., :3]  # remove alpha if present
+    rgb_np = rgb_np[..., :3]  # Ensure 3 channels
 
-    # Jet-colored heatmap
+    # Create heatmap using Jet colormap
     heatmap_uint8 = np.uint8(255 * grayscale_cam)
     heatmap_color = cv2.applyColorMap(heatmap_uint8, cv2.COLORMAP_JET)
     heatmap_rgb = cv2.cvtColor(heatmap_color, cv2.COLOR_BGR2RGB)
 
+    # Overlay Grad-CAM heatmap on image
     overlay_np = show_cam_on_image(rgb_np, grayscale_cam, use_rgb=True)
 
-    # Convert to PIL for display
-    overlay_pil = Image.fromarray(overlay_np)
-    heatmap_pil = Image.fromarray(heatmap_rgb)
-    original_pil = image.resize((224, 224))
+    # Convert to PIL
+    heatmap_img = Image.fromarray(heatmap_rgb)
+    overlay_img = Image.fromarray(overlay_np)
+    original_img = image.resize((224, 224))
 
-    # Focus score and attention center
-    focus_ratio = float((grayscale_cam > 0.5).mean())
+    # === Attention Interpretation ===
+    focus_ratio = float((grayscale_cam > 0.5).mean())  # % of patch model focused on
+
+    # Calculate center of attention
     coords = np.column_stack(np.where(grayscale_cam > 0.5))
-    center_distance = 1.0
-    norm_x, norm_y = 0.5, 0.5
-    if coords.any():
+    if coords.size > 0:
         y, x = coords.mean(axis=0)
         h, w = grayscale_cam.shape
         norm_x, norm_y = x / w, y / h
-        center_distance = np.sqrt((norm_x - 0.5)**2 + (norm_y - 0.5)**2)
-
-    # Interpretation logic
-    if focus_ratio > 0.3 and center_distance < 0.3:
-        observation = "High central attention on dense region—suggestive of carcinoma focus."
-        note = "⚠️ Considered likely malignant. Follow-up histopathological confirmation advised."
-    elif focus_ratio < 0.1:
-        observation = "Diffuse attention with low model certainty."
-        note = "⚠️ Inconclusive focus; could represent ambiguous tissue. Recommend retesting."
-    elif focus_ratio >= 0.1 and center_distance >= 0.6:
-        observation = "Peripheral activation—possibly boundary tissue or well-differentiated zone."
-        note = "✅ No critical concern. Likely benign."
     else:
-        observation = "Moderate attention around tissue clusters."
-        note = "✅ Likely benign, but attention map suggests areas worth inspection."
+        norm_x, norm_y = 0.5, 0.5
 
-    return overlay_pil, heatmap_pil, note, focus_ratio, observation, (norm_x, norm_y)
+    # === Clinical Interpretation Rules ===
+    if focus_ratio > 0.3 and np.sqrt((norm_x - 0.5) ** 2 + (norm_y - 0.5) ** 2) < 0.3:
+        observation = "High central attention on dense region—suggestive of carcinoma focus."
+        note = "⚠️ Likely malignant. Recommend histopathology confirmation."
+    elif focus_ratio < 0.1:
+        observation = "Diffuse attention with low confidence."
+        note = "⚠️ Inconclusive result. Retesting recommended."
+    elif focus_ratio >= 0.1 and np.sqrt((norm_x - 0.5) ** 2 + (norm_y - 0.5) ** 2) >= 0.6:
+        observation = "Peripheral attention—possibly benign or transitional tissue."
+        note = "✅ No immediate concern."
+    else:
+        observation = "Moderate attention on irregular tissue clusters."
+        note = "⚠️ Review advisable."
+
+    return overlay_img, heatmap_img, note, focus_ratio, (norm_x, norm_y), observation
 
 def generate_pdf_report(original_pil, heat_pil, overlay_pil, class_idx, obs, note):
     buffer = BytesIO()
