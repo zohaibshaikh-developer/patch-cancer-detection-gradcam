@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from utils.analytics_utils import load_metrics
+from app.utils.analytics_utils import load_metrics
 
 st.title("📊 Analytics Dashboard")
 
