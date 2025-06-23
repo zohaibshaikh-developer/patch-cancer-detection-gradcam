@@ -36,23 +36,27 @@ def predict_and_visualize(image: Image.Image):
         device=device
     )
 
+    center_coords = (0.50, 0.50)  # Replace with real logic if available
+
     return {
-        "pred": pred,  # ✅ Add this line
-        "conf": confidence[pred],  # ✅ Confidence of the predicted class
+        "pred": pred,
+        "conf": confidence[pred],
         "overlay": overlay_img,
         "heatmap": heatmap_img,
         "original": image,
         "note": clinical_note,
-        "observation": f"Model focused {focus_score*100:.2f}% on suspicious regions.",
-        "focus_percent": f"{focus_score*100:.2f}%",
-        "center": "Center coordinates not implemented",  # You can update this if needed
+        "observation": f"Model focused {focus_score * 100:.2f}% on suspicious regions.",
+        "focus_percent": f"{focus_score * 100:.2f}%",
+        "center": f"({center_coords[0]:.2f}, {center_coords[1]:.2f})",
         "pdf_buffer": build_patch_pdf_report(
-            pred=pred,
+            original_image=image,
+            heatmap_image=heatmap_img,
+            overlay_image=overlay_img,
+            prediction=pred,
             confidence=confidence[pred],
-            overlay_img=overlay_img,
-            heatmap_img=heatmap_img,
-            original_img=image,
-            focus_score=focus_score,
-            note=clinical_note
+            focus_ratio=focus_score,
+            center_distance=center_coords,
+            observation=f"Model focused {focus_score * 100:.2f}% on suspicious regions.",
+            clinical_note=clinical_note
         )
     }
