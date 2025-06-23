@@ -26,6 +26,8 @@ def predict_and_visualize(image: Image.Image):
     outputs = model(image_tensor)
     confidence = torch.softmax(outputs, dim=1)[0].tolist()
 
+    pred = outputs.argmax(dim=1).item()
+
     # Grad-CAM and interpretation
     overlay_img, heatmap_img, clinical_note, focus_score = apply_gradcam_and_interpret(
         model=model,
