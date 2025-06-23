@@ -1,5 +1,7 @@
 import streamlit as st
-from app.utils.model_loader import predict_and_visualize
+# from app.utils.model_loader import predict_and_visualize
+from utils.model_loader import predict_and_visualize
+
 from PIL import Image
 
 st.set_page_config(page_title="Upload and Predict", layout="wide")
