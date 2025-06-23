@@ -1,0 +1,4 @@
+Total Samples,Correct,Accuracy (%),Loss
+106785,106378,99.62,0.0113
+Per-Class Accuracy,Normal,99.85
+,Anomaly,98.86

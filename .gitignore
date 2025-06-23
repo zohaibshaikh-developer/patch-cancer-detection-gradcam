@@ -10,7 +10,6 @@ __pycache__/
 cancer-env/
 
 # Logs, Checkpoints, Models
-logs/
 models/
 *.pth
 *.pt
@@ -27,3 +26,7 @@ datasets/
 # Streamlit & Cache
 .streamlit/
 .ipynb_checkpoints/
+
+logs/*.log
+logs/*.txt
+!logs/test_metrics_*.csv
