@@ -1,5 +1,5 @@
 import torch
-from torchvision.models import resnet18
+from torchvision.models import resnet18, ResNet18_Weights
 from torchvision import transforms
 from PIL import Image
 
@@ -9,7 +9,7 @@ from .report_generator_live import build_patch_pdf_report
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Load pretrained model
-model = resnet18(pretrained=True)
+model = resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
 model.fc = torch.nn.Linear(model.fc.in_features, 2)  # Assuming 2-class output
 model.to(device)
 model.eval()
@@ -28,15 +28,13 @@ def predict_and_visualize(image: Image.Image):
     pred = outputs.argmax(dim=1).item()
 
     # Grad-CAM and interpretation
-    overlay_img, heatmap_img, note, focus_score, center_coords, observation = apply_gradcam_and_interpret(
+    overlay_img, heatmap_img, clinical_note, focus_score, center_coords, observation = apply_gradcam_and_interpret(
         model=model,
         image=image,
         target_layer=model.layer4[-1],
         class_idx=pred,
         device=device
     )
-
-    center_coords = (0.50, 0.50)  # Replace with real logic if available
 
     return {
         "pred": pred,
@@ -60,4 +58,3 @@ def predict_and_visualize(image: Image.Image):
             clinical_note=clinical_note
         )
     }
-
